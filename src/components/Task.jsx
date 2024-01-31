@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { Buffer } from "buffer";
 export default function Task() {
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -26,10 +27,27 @@ export default function Task() {
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [userData, setUserData] = useState([]);
   const navigate = useNavigate();
+  const [images, setImages] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [price, setPrices] = useState(null);
+  const [garmentType, setGarmentType] = useState(null);
 
   useEffect(() => {
     fetchTasks();
+    getImages();
   }, []);
+
+  const getImages = async () => {
+    try {
+      const response = await axios.get(`http://localhost:4000/getImages/01`);
+      console.log(response.data[0]._id);
+      setImages(response.data);
+
+      console.log(response.data);
+    } catch (error) {
+      console.error("Error getting images:", error);
+    }
+  };
 
   const fetchTasks = async () => {
     setRole(localStorage.getItem("role"));
@@ -75,8 +93,57 @@ export default function Task() {
         console.log(err);
       });
   };
+  const handleSubmit = async () => {
+    const formData = new FormData();
+    formData.append("image", selectedFile);
+    formData.append("price", price);
+    formData.append("garmentType", garmentType);
+    try {
+      const response = await axios.post(
+        `http://localhost:4000/upload/01`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            ...(localStorage.getItem("authorization")
+              ? { Authorization: localStorage.getItem("authorization") }
+              : {}),
+          },
+        }
+      );
+
+    } catch (error) {
+      console.error("Error getting images:", error);
+    }
+  };
   return (
     <div className="task-container">
+      <input
+        type="file"
+        onChange={(event) => setSelectedFile(event.target.files[0])}
+      />
+      <input type="number" onChange={(e) => setPrices(e.target.value)} />
+      <input type="text" onChange={(e) => setGarmentType(e.target.value)} />
+
+      <button type="submit" onClick={handleSubmit}>
+        submit
+      </button>
+      {images?.map((image, index) => {
+        const base64Data = Buffer.from(image.data).toString("base64");
+        const imageUrl = `data:${image.contentType};base64,${base64Data}`;
+        return (
+          <div key={index}>
+            <img
+              src={imageUrl}
+              alt={`Image ${index}`}
+              style={{ maxWidth: "200px", margin: "10px" }}
+              type="file"
+            />
+            <p>{image.price}</p>
+            <p>{image.garmentType}</p>
+          </div>
+        );
+      })}
       <LogoutIcon
         className="logout-icon"
         onClick={() => {
